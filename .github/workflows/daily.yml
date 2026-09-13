@@ -1,0 +1,44 @@
+name: Daily Market Report
+
+on:
+  schedule:
+    # 06:00 UTC every day (~08:00 CEST / 07:00 CET)
+    - cron: "0 6 * * *"
+  workflow_dispatch:  # allow manual runs
+
+permissions:
+  contents: write
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate report (rule-based)
+        run: python src/main.py
+        env:
+          # Optional – add these as repository secrets if you want LLM reports
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          LLM_BASE_URL: ${{ secrets.LLM_BASE_URL }}
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
+
+      - name: Commit & push report
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Daily market report $(date -u +%Y-%m-%d)"
+          file_pattern: "reports/*.md"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
